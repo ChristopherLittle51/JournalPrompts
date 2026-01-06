@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGemini } from '../hooks/useGemini';
 import { useTTS } from '../hooks/useTTS';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
 import { Copy, Volume2, Sparkles, MessageSquare, Save } from 'lucide-react';

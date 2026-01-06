@@ -4,7 +4,7 @@ import { PromptEngine } from './components/PromptEngine';
 import { Methodology } from './components/Methodology';
 import { Analytics } from './components/Analytics';
 import { Login } from './components/Login';
-import { useAuth } from './contexts/AuthContext';
+import { useAuth } from './hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 

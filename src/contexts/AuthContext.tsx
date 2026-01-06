@@ -1,17 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import type { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
-
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  loading: boolean;
-  signInWithGoogle: () => Promise<void>;
-  signInWithEmail: (email: string) => Promise<{ error: any }>;
-  signOut: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import React, { useEffect, useState } from "react";
+import type { User, Session } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabase";
+import { AuthContext } from "./AuthCtx";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -40,9 +30,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: "google",
     });
-    if (error) console.error('Error logging in:', error.message);
+    if (error) console.error("Error logging in:", error.message);
   };
 
   const signInWithEmail = async (email: string) => {
@@ -55,22 +45,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
+  const verifyOtp = async (email: string, token: string) => {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: "email",
+    });
+
+    if (!error && data.session) {
+      setSession(data.session);
+      setUser(data.session.user);
+    }
+
+    return { data, error };
+  };
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) console.error('Error logging out:', error.message);
+    if (error) console.error("Error logging out:", error.message);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signInWithGoogle, signInWithEmail, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        loading,
+        signInWithGoogle,
+        signInWithEmail,
+        verifyOtp,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 }
