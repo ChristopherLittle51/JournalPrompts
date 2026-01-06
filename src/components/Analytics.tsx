@@ -22,7 +22,7 @@ export const Analytics: React.FC = () => {
 
     React.useEffect(() => {
         if (!user) return;
-        
+        setLoadingData(true);
         async function fetchData() {
             try {
                 const { data, error } = await supabase
