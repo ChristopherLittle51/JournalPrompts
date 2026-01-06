@@ -143,5 +143,32 @@ export function useGemini() {
         }
     };
 
-    return { generatePrompt, digDeeper, analyzeLog, loading, error };
+    const analyzeSentiment = async (text: string): Promise<string> => {
+        if (!text) return "Neutral";
+        // don't set global loading state for this background task to avoid blocking UI
+        
+        try {
+            if (!API_KEY) return "Neutral";
+
+            const prompt = `Identify the dominant emotion in the following journal entry. specific one word feeling (e.g. Grateful, Anxious, Inspired, etc). Output ONLY the one word. Text: "${text}"`;
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }]
+                })
+            });
+
+            if (!response.ok) return "Neutral";
+            const data = await response.json();
+            const sentiment = data.candidates[0].content.parts[0].text.trim().replace(/^"|"$/g, '');
+            return sentiment;
+        } catch (err) {
+            console.error("Sentiment analysis failed", err);
+            return "Neutral";
+        }
+    };
+
+    return { generatePrompt, digDeeper, analyzeLog, analyzeSentiment, loading, error };
 }

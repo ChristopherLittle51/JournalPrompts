@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useGemini } from '../hooks/useGemini';
 import { useTTS } from '../hooks/useTTS';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
-import { Copy, Volume2, Sparkles, MessageSquare } from 'lucide-react';
+import { Copy, Volume2, Sparkles, MessageSquare, Save } from 'lucide-react';
 
 const TABS = [
     { id: 'daily', label: 'Daily' },
@@ -33,8 +35,14 @@ export const PromptEngine: React.FC = () => {
     const [prompt, setPrompt] = useState<string>('');
     const [aiContext, setAiContext] = useState('');
     const [copyFeedback, setCopyFeedback] = useState(false);
+
+    const [answer, setAnswer] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+    const { user } = useAuth();
     
-    const { generatePrompt, digDeeper, loading, error } = useGemini();
+    const { generatePrompt, digDeeper, analyzeSentiment, loading, error } = useGemini();
     const { speak, isSpeaking } = useTTS();
 
     const handleGenerate = async (tab: string = currentTab) => {
@@ -51,6 +59,36 @@ export const PromptEngine: React.FC = () => {
         navigator.clipboard.writeText(prompt);
         setCopyFeedback(true);
         setTimeout(() => setCopyFeedback(false), 2000);
+    };
+
+    const handleSave = async () => {
+        if (!user || !prompt || !answer.trim()) return;
+        setIsSaving(true);
+        setSaveMessage(null);
+
+        try {
+            // Analyze sentiment/emotion before saving
+            const sentimentResult = await analyzeSentiment(answer);
+
+            const { error } = await supabase.from('entries').insert({
+                user_id: user.id,
+                prompt_text: prompt,
+                response_text: answer,
+                category: currentTab,
+                sentiment: sentimentResult,
+                created_at: new Date().toISOString(),
+            });
+
+            if (error) throw error;
+            setSaveMessage({ type: 'success', text: 'Entry saved successfully!' });
+            setAnswer('');
+            setTimeout(() => setSaveMessage(null), 3000);
+        } catch (err: unknown) {
+             console.error('Error saving entry:', err);
+             setSaveMessage({ type: 'error', text: 'Failed to save entry.' });
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     // Initial load
@@ -131,6 +169,25 @@ export const PromptEngine: React.FC = () => {
                        {currentTab === 'ai' && !prompt.startsWith('"') ? prompt : `"${prompt.replace(/"/g, '')}"`}
                     </h4>
 
+                    {/* Answer Area */}
+                    <div className="w-full max-w-2xl mb-8">
+                        <textarea
+                            value={answer}
+                            onChange={(e) => setAnswer(e.target.value)}
+                            placeholder="Type your reflection here..."
+                            className="w-full p-4 bg-white/80 border border-stone-200 rounded-lg shadow-inner text-stone-700 focus:ring-2 focus:ring-stone-400 focus:outline-none transition-all placeholder:text-stone-400"
+                            rows={4}
+                        />
+                         {saveMessage && (
+                            <div className={cn(
+                                "mt-2 text-sm text-center",
+                                saveMessage.type === 'success' ? "text-green-600" : "text-red-600"
+                            )}>
+                                {saveMessage.text}
+                            </div>
+                        )}
+                    </div>
+
                     <div className="flex flex-col md:flex-row gap-4 flex-wrap justify-center">
                         <button 
                             onClick={() => handleGenerate()}
@@ -143,6 +200,18 @@ export const PromptEngine: React.FC = () => {
                         >
                             {loading ? <div className="w-5 h-5 border-2 border-white/30 border-l-white rounded-full animate-spin" /> : <Sparkles className="w-4 h-4" />}
                             <span>{currentTab === 'ai' ? "Ask Gemini" : "Generate New"}</span>
+                        </button>
+
+                         <button 
+                            onClick={handleSave}
+                            disabled={isSaving || !answer.trim()}
+                            className={cn(
+                                "text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg btn-hover min-w-[140px]",
+                                "bg-stone-700 hover:bg-stone-600 disabled:bg-stone-400 disabled:cursor-not-allowed"
+                            )}
+                        >
+                            {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-l-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                            <span>Save Entry</span>
                         </button>
                         
                         {currentTab !== 'ai' && (
