@@ -85,11 +85,10 @@ export const Login: React.FC = () => {
                   id="otp"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
-                  placeholder="123456"
+                  placeholder="Code from email"
                   className="w-full pl-10 pr-4 py-3 rounded-lg border border-stone-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all bg-stone-50"
                   required
                   autoFocus
-                  maxLength={6}
                 />
                 <KeyRound className="absolute left-3 top-3.5 w-5 h-5 text-stone-400" />
               </div>
